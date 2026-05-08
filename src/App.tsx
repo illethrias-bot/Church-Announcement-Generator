@@ -155,9 +155,10 @@ export default function App() {
     addDays(startOfWeek(new Date(), { weekStartsOn: 0 }), 7)
   );
 
-  // Set explicitly on mount to avoid hydration mismatch (optional but good)
   useEffect(() => {
-    setCurrentWeekStart(addDays(startOfWeek(new Date(), { weekStartsOn: 0 }), 7));
+    const initialWeekStart = addDays(startOfWeek(new Date(), { weekStartsOn: 0 }), 7);
+    setCurrentWeekStart(initialWeekStart);
+    syncCalendar(initialWeekStart);
   }, []);
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -186,11 +187,11 @@ export default function App() {
   const handlePrevWeek = () => setCurrentWeekStart(prev => subDays(prev, 7));
   const handleNextWeek = () => setCurrentWeekStart(prev => addDays(prev, 7));
 
-  const syncCalendar = async () => {
+  const syncCalendar = async (targetWeekStart: Date = currentWeekStart) => {
     setIsSyncing(true);
     try {
-      const startParam = currentWeekStart.toISOString();
-      const endParam = addDays(currentWeekStart, 8).toISOString(); // 8 days to include the final Sunday entirely (up to Monday midnight)
+      const startParam = targetWeekStart.toISOString();
+      const endParam = addDays(targetWeekStart, 8).toISOString(); // 8 days to include the final Sunday entirely (up to Monday midnight)
       const response = await fetch(`/api/events?start=${startParam}&end=${endParam}`);
       const apiData = await response.json();
       
@@ -198,7 +199,7 @@ export default function App() {
       const daysCount = 8; // Sunday to Sunday inclusive
 
       for (let i = 0; i < daysCount; i++) {
-        const currentDate = addDays(currentWeekStart, i);
+        const currentDate = addDays(targetWeekStart, i);
         const dayEvents = apiData.events.filter((e: ApiEvent) => isSameDay(parseISO(e.start), currentDate));
         
         // Filter out empty days unless it's the start or end Sunday, we might want to keep all days.
@@ -234,7 +235,7 @@ export default function App() {
 
       setData(prev => ({
         ...prev,
-        weekTitle: `Týden od ${format(currentWeekStart, 'd. M.')} do ${format(addDays(currentWeekStart, 7), 'd. M. yyyy')}`,
+        weekTitle: `Týden od ${format(targetWeekStart, 'd. M.')} do ${format(addDays(targetWeekStart, 7), 'd. M. yyyy')}`,
         days: newDays
       }));
     } catch (err) {
