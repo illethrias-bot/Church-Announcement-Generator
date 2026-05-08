@@ -137,10 +137,7 @@ const INITIAL_DATA: AnnouncementData = {
       ]
     }
   ],
-  specialNotices: [
-    "Intence na duben – volné",
-    "Hradiště další mše – 10. 5. 2025"
-  ]
+  specialNotices: []
 };
 
 // --- Main Component ---
@@ -224,6 +221,17 @@ export default function App() {
             };
           });
 
+          const isoDate = format(currentDate, 'yyyy-MM-dd');
+          const liturgicalCelebration = apiData.liturgicalCelebrations?.[isoDate];
+          
+          if (liturgicalCelebration) {
+            eventsList.unshift({
+              id: `evt-${crypto.randomUUID()}`,
+              text: liturgicalCelebration,
+              isItalic: true
+            });
+          }
+
           newDays.push({
             id: `sync-${i}`,
             dayName: format(currentDate, 'EEEE', { locale: cs }),
@@ -235,7 +243,7 @@ export default function App() {
 
       setData(prev => ({
         ...prev,
-        weekTitle: `Týden od ${format(targetWeekStart, 'd. M.')} do ${format(addDays(targetWeekStart, 7), 'd. M. yyyy')}`,
+        weekTitle: apiData.liturgicalTitle || `Týden od ${format(targetWeekStart, 'd. M.')} do ${format(addDays(targetWeekStart, 7), 'd. M. yyyy')}`,
         days: newDays
       }));
     } catch (err) {
@@ -490,7 +498,7 @@ export default function App() {
               </div>
               
               <button 
-                onClick={syncCalendar}
+                onClick={() => syncCalendar()}
                 disabled={isSyncing}
                 className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50"
               >

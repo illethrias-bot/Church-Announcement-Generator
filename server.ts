@@ -100,11 +100,62 @@ async function startServer() {
       // Sort chronological
       eventsObj.sort((a, b) => a.start.getTime() - b.start.getTime());
 
+      let liturgicalTitle: string | null = null;
+      const liturgicalCelebrations: Record<string, string> = {};
+      try {
+        const titleCid = 'ib4qv9bn6toa4qcbdri40ced5g@group.calendar.google.com';
+        const titleCalendarUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(titleCid)}/public/basic.ics`;
+        const titleData = await ical.async.fromURL(titleCalendarUrl);
+        for (const k in titleData) {
+          if (titleData.hasOwnProperty(k)) {
+            const ev = titleData[k];
+            if (ev.type === 'VEVENT') {
+              if (ev.start >= startDate && ev.start < endDate) {
+                const summary = ev.summary || '';
+                
+                // For the Sunday liturgical Title
+                if (ev.start.getUTCDay() === 0 || ev.start.getDay() === 0) {
+                  if (ev.start.getTime() < startDate.getTime() + 48*3600000) {
+                    const match = summary.match(/\(([^)]+)\)/);
+                    if (match && match[1]) {
+                       liturgicalTitle = match[1];
+                    }
+                  }
+                }
+
+                // Extract celebration text
+                if (summary.includes('/')) {
+                    const parts = summary.split('/');
+                    let celebration = parts.pop()?.trim();
+                    if (celebration) {
+                        const czechDays = ['pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota', 'neděle'];
+                        const lastParenMatch = celebration.match(/\s*\(([^)]+)\)$/);
+                        if (lastParenMatch) {
+                            const inParen = lastParenMatch[1];
+                            const hasDay = czechDays.some(d => inParen.toLowerCase().includes(d));
+                            if (hasDay) {
+                                celebration = celebration.replace(/\s*\([^)]+\)$/, '').trim();
+                            }
+                        }
+                        const dateStr = ev.start.toISOString().split('T')[0];
+                        liturgicalCelebrations[dateStr] = celebration;
+                    }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed reading liturgical calendar', e);
+      }
+
       res.json({
         timeRange: {
           start: startDate.toISOString(),
           end: endDate.toISOString(),
         },
+        liturgicalTitle,
+        liturgicalCelebrations,
         events: eventsObj,
       });
 
