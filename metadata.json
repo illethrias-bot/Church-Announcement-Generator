@@ -1,0 +1,5 @@
+{
+  "name": "Church Announcement Generator",
+  "description": "Create and print weekly church announcement documents with calendar schedules and special notices.",
+  "requestFramePermissions": []
+}
